@@ -1,0 +1,33 @@
+package edu.ccrm.exception;
+
+public class DuplicateEnrollmentException extends RuntimeException {
+    public DuplicateEnrollmentException(String message) {
+        super(message);
+    }
+    
+    public DuplicateEnrollmentException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+//MaxCreditLimitExceededException.java
+package edu.ccrm.exception;
+
+public class MaxCreditLimitExceededException extends RuntimeException {
+    private final int currentCredits;
+    private final int attemptedCredits;
+    private final int maxAllowed;
+    
+    public MaxCreditLimitExceededException(String message, int currentCredits, int attemptedCredits, int maxAllowed) {
+        super(message);
+        this.currentCredits = currentCredits;
+        this.attemptedCredits = attemptedCredits;
+        this.maxAllowed = maxAllowed;
+    }
+    
+    public int getCurrentCredits() { return currentCredits; }
+    public int getAttemptedCredits() { return attemptedCredits; }
+    public int getMaxAllowed() { return maxAllowed; }
+}
+
+

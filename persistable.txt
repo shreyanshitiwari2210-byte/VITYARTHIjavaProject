@@ -1,0 +1,17 @@
+package edu.ccrm.domain;
+
+public interface Persistable {
+    String toCSV();
+    void fromCSV(String csvLine);
+}
+
+
+//searchable.java
+package edu.ccrm.domain;
+
+import java.util.List;
+
+public interface Searchable<T> {
+    List<T> search(String query);
+}
+

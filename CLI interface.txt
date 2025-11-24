@@ -1,0 +1,253 @@
+package edu.ccrm.cli;
+
+import edu.ccrm.domain.*;
+import edu.ccrm.service.CourseService;
+import edu.ccrm.service.StudentService;
+import edu.ccrm.io.ImportExportService;
+import edu.ccrm.io.BackupService;
+import edu.ccrm.util.ValidationUtil;
+import edu.ccrm.util.RecursionUtil;
+import edu.ccrm.config.AppConfig;
+import edu.ccrm.exception.MaxCreditLimitExceededException;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Scanner;
+import java.util.Optional;
+import java.util.Comparator;
+
+public class CCRMCLI {
+    private final Scanner scanner;
+    private final CourseService courseService;
+    private final StudentService studentService;
+    private final ImportExportService importExportService;
+    private final BackupService backupService;
+    private final AppConfig config;
+    
+    public CCRMCLI() {
+        this.scanner = new Scanner(System.in);
+        this.courseService = new CourseService();
+        this.studentService = new StudentService();
+        this.importExportService = new ImportExportService(courseService, studentService);
+        this.backupService = new BackupService();
+        this.config = AppConfig.getInstance();
+        initializeSampleData();
+    }
+    
+    private void initializeSampleData() {
+        // Create sample courses using Builder pattern
+        Course javaCourse = new Course.Builder("CSE101", "Java Programming")
+            .credits(4)
+            .instructor("Dr. Smith")
+            .semester(Semester.FALL)
+            .department("Computer Science")
+            .build();
+            
+        Course dbCourse = new Course.Builder("CSE102", "Database Systems")
+            .credits(3)
+            .instructor("Dr. Johnson")
+            .semester(Semester.SPRING)
+            .department("Computer Science")
+            .build();
+            
+        courseService.addCourse(javaCourse);
+        courseService.addCourse(dbCourse);
+        
+        // Create sample students
+        Student student1 = new Student("STU001", "2023001", "John Doe", "john.doe@university.edu");
+        Student student2 = new Student("STU002", "2023002", "Jane Smith", "jane.smith@university.edu");
+        
+        studentService.addStudent(student1);
+        studentService.addStudent(student2);
+    }
+    
+    public void start() {
+        System.out.println("=== Campus Course & Records Manager (CCRM) ===");
+        System.out.println("Java SE Console Application\n");
+        
+        mainLoop: while (true) {
+            printMainMenu();
+            String choice = scanner.nextLine().trim();
+            
+            switch (choice) {
+                case "1":
+                    manageStudents();
+                    break;
+                case "2":
+                    manageCourses();
+                    break;
+                case "3":
+                    manageEnrollments();
+                    break;
+                case "4":
+                    manageGrades();
+                    break;
+                case "5":
+                    importExportData();
+                    break;
+                case "6":
+                    backupOperations();
+                    break;
+                case "7":
+                    generateReports();
+                    break;
+                case "8":
+                    showJavaPlatformInfo();
+                    break;
+                case "0":
+                    System.out.println("Thank you for using CCRM. Goodbye!");
+                    break mainLoop;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+    
+    private void printMainMenu() {
+        System.out.println("\n--- MAIN MENU ---");
+        System.out.println("1. Manage Students");
+        System.out.println("2. Manage Courses");
+        System.out.println("3. Manage Enrollments");
+        System.out.println("4. Manage Grades");
+        System.out.println("5. Import/Export Data");
+        System.out.println("6. Backup Operations");
+        System.out.println("7. Generate Reports");
+        System.out.println("8. Java Platform Info");
+        System.out.println("0. Exit");
+        System.out.print("Enter your choice: ");
+    }
+    
+    private void manageStudents() {
+        studentLoop: while (true) {
+            System.out.println("\n--- STUDENT MANAGEMENT ---");
+            System.out.println("1. Add Student");
+            System.out.println("2. List All Students");
+            System.out.println("3. Update Student");
+            System.out.println("4. Deactivate Student");
+            System.out.println("5. View Student Profile");
+            System.out.println("6. Generate Transcript");
+            System.out.println("0. Back to Main Menu");
+            System.out.print("Enter your choice: ");
+            
+            String choice = scanner.nextLine().trim();
+            
+            switch (choice) {
+                case "1":
+                    addStudent();
+                    break;
+                case "2":
+                    listStudents();
+                    break;
+                case "3":
+                    updateStudent();
+                    break;
+                case "4":
+                    deactivateStudent();
+                    break;
+                case "5":
+                    viewStudentProfile();
+                    break;
+                case "6":
+                    generateTranscript();
+                    break;
+                case "0":
+                    break studentLoop;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+    
+    private void addStudent() {
+        try {
+            System.out.print("Enter Student ID (format: STUxxx): ");
+            String id = scanner.nextLine().trim();
+            
+            System.out.print("Enter Registration Number: ");
+            String regNo = scanner.nextLine().trim();
+            
+            System.out.print("Enter Full Name: ");
+            String fullName = scanner.nextLine().trim();
+            
+            System.out.print("Enter Email: ");
+            String email = scanner.nextLine().trim();
+            
+            if (!ValidationUtil.isValidEmail(email)) {
+                System.out.println("Invalid email format.");
+                return;
+            }
+            
+            Student student = new Student(id, regNo, fullName, email);
+            studentService.addStudent(student);
+            System.out.println("Student added successfully!");
+            
+        } catch (Exception e) {
+            System.out.println("Error adding student: " + e.getMessage());
+        }
+    }
+    
+    private void listStudents() {
+        List<Student> students = studentService.getActiveStudents();
+        if (students.isEmpty()) {
+            System.out.println("No students found.");
+            return;
+        }
+        
+        System.out.println("\n--- ACTIVE STUDENTS ---");
+        students.forEach(student -> {
+            System.out.println(student.getDisplayInfo());
+        });
+    }
+    
+    private void updateStudent() {
+        System.out.print("Enter Student ID to update: ");
+        String id = scanner.nextLine().trim();
+        
+        Optional<Student> studentOpt = studentService.getStudent(id);
+        if (studentOpt.isEmpty()) {
+            System.out.println("Student not found.");
+            return;
+        }
+        
+        System.out.print("Enter new Full Name: ");
+        String fullName = scanner.nextLine().trim();
+        
+        System.out.print("Enter new Email: ");
+        String email = scanner.nextLine().trim();
+        
+        if (studentService.updateStudent(id, fullName, email)) {
+            System.out.println("Student updated successfully!");
+        } else {
+            System.out.println("Failed to update student.");
+        }
+    }
+    
+    private void manageCourses() {
+        // Similar implementation to manageStudents()
+        // ... (code for course management)
+    }
+    
+    private void manageEnrollments() {
+        // Implementation for enrollment management
+    }
+    
+    private void manageGrades() {
+        // Implementation for grade management
+    }
+    
+    private void importExportData() {
+        // Implementation for import/export operations
+    }
+    
+    private void backupOperations() {
+        backupLoop: while (true) {
+            System.out.println("\n--- BACKUP OPERATIONS ---");
+            System.out.println("1. Create Backup");
+            System.out.println("2. Show Backup Size (Recursive)");
+            System.out.println("3. List Backup Files");
+            System.out.println("0. Back to Main Menu");
+            System.out.print("Enter your choice: ");
+            
+            String choice = scanner.nextLine
